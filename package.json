@@ -1,0 +1,11 @@
+{
+  "name": "ceveca-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && node --test",
+    "preview": "npm run build && node scripts/preview.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

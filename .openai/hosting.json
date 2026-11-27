@@ -1,0 +1,4 @@
+{
+  "r2": { "binding": "BUCKET" },
+  "capabilities": ["mcp"]
+}
