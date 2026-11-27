@@ -262,7 +262,7 @@ export default {
     const head = request.method === 'HEAD';
     if (request.method !== 'GET' && !head) return error('Method not allowed', 405);
 
-    if (path === '/api/instagram') {
+    if (path === '/feed/posts.json' || path === '/api/instagram') {
       try {
         const { posts, syncedAt } = await state(env.BUCKET);
         return new Response(head ? null : JSON.stringify({ posts, syncedAt }), {

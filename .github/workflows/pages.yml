@@ -1,0 +1,84 @@
+name: CEVECA Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      sync_facebook:
+        description: Refresh photos from the CEVECA Facebook Page before publishing
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: ceveca-pages
+  cancel-in-progress: false
+
+jobs:
+  facebook:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.sync_facebook)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Download the latest public photo posts
+        env:
+          FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+          FACEBOOK_GRAPH_VERSION: ${{ vars.FACEBOOK_GRAPH_VERSION }}
+        run: node scripts/sync-facebook.mjs "$RUNNER_TEMP/facebook-feed"
+      - name: Save the complete feed if it changed
+        run: |
+          rsync -a --delete "$RUNNER_TEMP/facebook-feed/" feed/
+          git add -- feed/
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Refresh CEVECA Facebook photos'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+  publish:
+    needs: facebook
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+          (needs.facebook.result == 'success' || needs.facebook.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm test
+      - run: npm run build:pages
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/pages
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

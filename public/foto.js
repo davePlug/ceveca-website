@@ -72,15 +72,15 @@
     }).observe(gallery);
   }
 
-  async function loadInstagram() {
-    const response = await fetch('/api/instagram', { signal: AbortSignal.timeout(5000) });
+  async function loadFeed() {
+    const response = await fetch('feed/posts.json', { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return;
     const { posts } = await response.json();
     if (!Array.isArray(posts) || !posts.length) return;
 
     const nextSlides = posts.map(post => {
       const image = document.createElement('img');
-      image.className = 'photo-slide poster instagram';
+      image.className = 'photo-slide';
       image.alt = post.caption;
       image.dataset.caption = post.caption;
       image.dataset.post = post.url;
@@ -96,7 +96,7 @@
     show(0);
   }
 
-  if (location.protocol !== 'file:') loadInstagram().catch(() => {});
+  if (location.protocol !== 'file:') loadFeed().catch(() => {});
 
   controls.hidden = false;
   setPlaying(playing);
